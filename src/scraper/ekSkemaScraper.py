@@ -1,0 +1,175 @@
+import requests
+from bs4 import BeautifulSoup
+import undetected_chromedriver as uc
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import requests
+from bs4 import BeautifulSoup
+import pickle
+import os
+from urllib.parse import urlparse
+
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+import time
+from selenium.common.exceptions import StaleElementReferenceException
+
+URL = "https://cloud.timeedit.net/kea/web/stud/ri14Y102Q8ZZ65Q36068X0Q45Q990x06gZ6gY0yQ4Y7g969.html"
+
+
+def login(driver):
+    username = os.getenv("LOGIN_EMAIL")
+    password = os.getenv("LOGIN_PASSWORD")
+    if not username or not password:
+        raise Exception("LOGIN_EMAIL and LOGIN_PASSWORD environment variables must be set")
+
+    print("🔐 Navigating to ek.skema.com...")
+    driver.get("https://cloud.timeedit.net/kea/web/stud/ri14Y102Q8ZZ65Q36068X0Q45Q990x06gZ6gY0yQ4Y7g969.html")
+
+    # Wait for redirect to connect.jobteaser.com
+    WebDriverWait(driver, 20).until(
+        lambda d: "connect.jobteaser.com" in d.current_url
+    )
+    print("🔄 Landed on connect.skema.com")
+
+    # Click KEA login link (a-tag containing 'KEA' and ('konto' or 'account'))
+    for attempt in range(5):
+        try:
+            print(f"🎓 Looking for EK login link... (attempt {attempt + 1})")
+            login_link = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'EK') and (contains(text(), 'konto') or contains(text(), 'account'))]"))
+            )
+            login_link.click()
+            print("✅ Clicked EK login link!")
+            break
+        except Exception as e:
+            print(f"❌ EK login link not ready (attempt {attempt + 1}): {e}")
+            time.sleep(2)
+    else:
+        raise Exception("Could not find or click EK login link.")
+
+    # Wait for Microsoft login page to load
+    WebDriverWait(driver, 20).until(
+        lambda d: "login.microsoftonline.com" in d.current_url
+    )
+    print("➡️ On Microsoft login page")
+
+    # Enter email
+    WebDriverWait(driver, 30).until(
+        EC.presence_of_element_located((By.NAME, "loginfmt"))
+    )
+    email_input = driver.find_element(By.NAME, "loginfmt")
+    email_input.clear()
+    email_input.send_keys(username)
+
+    # ✅ FIX: Vent til knappen er klikbar før klik
+    next_btn = WebDriverWait(driver, 10).until(
+        EC.element_to_be_clickable((By.ID, "idSIButton9"))
+    )
+    next_btn.click()
+    print("➡️ Submitted email")
+
+    # Enter password
+    WebDriverWait(driver, 30).until(
+        EC.presence_of_element_located((By.NAME, "passwd"))
+    )
+    password_input = driver.find_element(By.NAME, "passwd")
+    password_input.clear()
+    password_input.send_keys(password)
+
+    # Retry clicking sign-in button in case of stale element
+    for attempt in range(3):
+        try:
+            sign_in_btn = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.ID, "idSIButton9"))
+            )
+            time.sleep(1)  # short delay before clicking
+            sign_in_btn.click()
+            print("➡️ Submitted password")
+            break
+        except StaleElementReferenceException:
+            print(f"⚠️ Stale element, retrying click attempt {attempt + 1}")
+            time.sleep(1)
+    else:
+        raise Exception("Failed to click the sign-in button after retries")
+
+    # Handle "Stay signed in?" prompt if it appears
+    try:
+        stay_signed_in_btn = WebDriverWait(driver, 5).until(
+            EC.element_to_be_clickable((By.ID, "idBtn_Back"))
+        )
+        stay_signed_in_btn.click()
+        print("➡️ Dismissed 'Stay signed in?' prompt")
+    except Exception:
+        print("➡️ No 'Stay signed in?' prompt appeared")
+
+    # Wait for redirect back to kea.jobteaser.com or jobteaser domain after login
+    WebDriverWait(driver, 60).until(
+        lambda d: any(domain in d.current_url for domain in ["ek.jobteaser.com", "jobteaser.com"])
+    )
+    print("🎉 Successfully logged in and redirected!")
+
+def scrape():
+    options = uc.ChromeOptions()
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    # options.add_argument("--headless")  # Uncomment to run headless
+
+    class PatchedChrome(uc.Chrome):
+        def __del__(self):
+            pass  # suppress undetected_chromedriver cleanup bug
+
+    driver = PatchedChrome(options=options)
+    print("Browser launched")
+
+    driver.get("https://ek.jobteaser.com")
+
+
+    login(driver)
+
+    driver.get(URL)
+    print("Target URL requested")
+
+    try:
+        WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div.sk-CardContainer_container__PNt2O"))
+        )
+    except Exception as e:
+        print("Timeout waiting for job cards:", e)
+        driver.quit()
+        return []
+
+    soup = BeautifulSoup(driver.page_source, 'html.parser')
+
+    data = []
+    for div in soup.select("div.sk-CardContainer_container__PNt2O"):
+        try:
+            companyName = div.select_one("p.JobAdCard_companyName__Ieoi3").get_text(strip=True)
+            jobTitle = div.select_one("h3.JobAdCard_title__vdhrP").get_text(strip=True)
+            link = "https://ek.jobteaser.com" + div.select_one("h3 a")["href"]
+            time = div.select_one("time.sk-Typography_regular__a_y2X").get_text(strip=True)
+            contract = div.select_one("div.JobAdCard_contractInfo__98QBU span").get_text(strip=True)
+            location = div.select_one('div[data-testid="jobad-card-location"] span').get_text(strip=True)
+
+
+            data.append({
+                "jobTitle": jobTitle,
+                "companyName": companyName,
+                "location": location,
+                "link": link,
+                "time": time,
+                "contract": contract,
+                "originsite": "EK Jobportal"
+            })
+        except Exception as e:
+            print(f"Skipping job card due to error: {e}")
+            continue
+
+    driver.quit()
+    print("Browser closed")
+    return data
+
+
