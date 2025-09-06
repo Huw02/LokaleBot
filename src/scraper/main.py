@@ -25,12 +25,6 @@ if __name__ == "__main__":
     except Exception as e:
         print("⚠️ KEA scraper failed:", e)
 
-    print("\n=== Scraping Jobindex ===")
-    try:
-        all_jobs += scrape_jobindex()
-    except Exception as e:
-        print("⚠️ Jobindex scraper failed:", e)
-
     if all_jobs:
         print(f"🎉 Total scraped: {len(all_jobs)} jobs")
         send_to_backend(all_jobs)

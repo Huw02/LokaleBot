@@ -30,7 +30,7 @@ def login(driver):
 
     # Wait for redirect to connect.jobteaser.com
     WebDriverWait(driver, 20).until(
-        lambda d: "connect.jobteaser.com" in d.current_url
+        lambda d: URL in d.current_url
     )
     print("🔄 Landed on connect.skema.com")
 
@@ -39,10 +39,17 @@ def login(driver):
         try:
             print(f"🎓 Looking for EK login link... (attempt {attempt + 1})")
             login_link = WebDriverWait(driver, 10).until(
-                EC.element_to_be_clickable((By.XPATH, "//a[contains(text(), 'EK') and (contains(text(), 'konto') or contains(text(), 'account'))]"))
+                EC.element_to_be_clickable((By.XPATH, "//input[@id='loginAuth']"))
             )
             login_link.click()
             print("✅ Clicked EK login link!")
+
+            print("trykker på sign in with kea_sso")
+            login_link = WebDriverWait(driver, 10).until(
+                EC.element_to_be_clickable((By.XPATH, "//button[@class='ant-btn css-8qnwxq ant-btn-default ant-btn-color-default ant-btn-variant-outlined ant-btn-block auth-config-button']"))
+            )
+            login_link.click()
+            print("har trykket på sign in with kea_sso")
             break
         except Exception as e:
             print(f"❌ EK login link not ready (attempt {attempt + 1}): {e}")
@@ -50,28 +57,32 @@ def login(driver):
     else:
         raise Exception("Could not find or click EK login link.")
 
+
     # Wait for Microsoft login page to load
     WebDriverWait(driver, 20).until(
         lambda d: "login.microsoftonline.com" in d.current_url
     )
     print("➡️ On Microsoft login page")
 
-    # Enter email
-    WebDriverWait(driver, 30).until(
-        EC.presence_of_element_located((By.NAME, "loginfmt"))
-    )
-    email_input = driver.find_element(By.NAME, "loginfmt")
+    print("del 1")
+    email_input = WebDriverWait(driver, 30).until(
+    EC.element_to_be_clickable((By.NAME, "loginfmt"))
+)
+    print("del 2")
     email_input.clear()
     email_input.send_keys(username)
+    print("del 3")
 
-    # ✅ FIX: Vent til knappen er klikbar før klik
+    # Vent på knappen og klik
     next_btn = WebDriverWait(driver, 10).until(
-        EC.element_to_be_clickable((By.ID, "idSIButton9"))
-    )
+    EC.element_to_be_clickable((By.ID, "idSIButton9"))
+)
+    print("del 4")
     next_btn.click()
     print("➡️ Submitted email")
 
-    # Enter password
+
+# Enter password
     WebDriverWait(driver, 30).until(
         EC.presence_of_element_located((By.NAME, "passwd"))
     )
@@ -107,7 +118,7 @@ def login(driver):
 
     # Wait for redirect back to kea.jobteaser.com or jobteaser domain after login
     WebDriverWait(driver, 60).until(
-        lambda d: any(domain in d.current_url for domain in ["ek.jobteaser.com", "jobteaser.com"])
+        lambda d: any(domain in d.current_url for domain in [URL])
     )
     print("🎉 Successfully logged in and redirected!")
 
@@ -125,7 +136,7 @@ def scrape():
     driver = PatchedChrome(options=options)
     print("Browser launched")
 
-    driver.get("https://ek.jobteaser.com")
+    driver.get(URL)
 
 
     login(driver)
