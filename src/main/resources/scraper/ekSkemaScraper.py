@@ -8,6 +8,9 @@ import requests
 from bs4 import BeautifulSoup
 import pickle
 import os
+import datetime
+import datetime as dt
+
 from urllib.parse import urlparse
 
 from selenium.webdriver.common.by import By
@@ -17,6 +20,9 @@ import time
 from selenium.common.exceptions import StaleElementReferenceException
 
 URL = "https://cloud.timeedit.net/kea/web/stud/ri14Y102Q8ZZ65Q36068X0Q45Q990x06gZ6gY0yQ4Y7g969.html"
+
+def todaysDate():
+    return datetime.today().strftime('%Y%m%d')
 
 
 def login(driver):
@@ -122,6 +128,12 @@ def login(driver):
     )
     print("🎉 Successfully logged in and redirected!")
 
+
+
+
+
+
+
 def scrape():
     options = uc.ChromeOptions()
     options.add_argument("--no-sandbox")
@@ -143,7 +155,9 @@ def scrape():
 
     driver.get(URL)
     print("Target URL requested")
-
+    #vi har fundet en div, hvor vi skal indsætte dagens dato  i "data-dates"
+    #herefter skal vi finde dens sub div og finde titel og gemme det
+    print("før scraping data")
     try:
         WebDriverWait(driver, 10).until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "div.sk-CardContainer_container__PNt2O"))
@@ -154,33 +168,98 @@ def scrape():
         return []
 
     soup = BeautifulSoup(driver.page_source, 'html.parser')
+    print("suppen er brygget")
 
     data = []
     for div in soup.select("div.sk-CardContainer_container__PNt2O"):
         try:
-            companyName = div.select_one("p.JobAdCard_companyName__Ieoi3").get_text(strip=True)
-            jobTitle = div.select_one("h3.JobAdCard_title__vdhrP").get_text(strip=True)
-            link = "https://ek.jobteaser.com" + div.select_one("h3 a")["href"]
-            time = div.select_one("time.sk-Typography_regular__a_y2X").get_text(strip=True)
-            contract = div.select_one("div.JobAdCard_contractInfo__98QBU span").get_text(strip=True)
-            location = div.select_one('div[data-testid="jobad-card-location"] span').get_text(strip=True)
+            title = div.select_one("p.JobAdCard_companyName__Ieoi3").get_text(strip=True)
+
 
 
             data.append({
-                "jobTitle": jobTitle,
-                "companyName": companyName,
-                "location": location,
-                "link": link,
-                "time": time,
-                "contract": contract,
-                "originsite": "EK Jobportal"
+                "title": title,
+
             })
+            print("efter scraping data")
         except Exception as e:
             print(f"Skipping job card due to error: {e}")
             continue
 
     driver.quit()
     print("Browser closed")
+    return data
+
+
+def scrapeTo():
+    options = uc.ChromeOptions()
+    options.add_argument("--no-sandbox")
+    options.add_argument("--disable-dev-shm-usage")
+    options.add_argument("--disable-gpu")
+    # options.add_argument("--headless")  # Uncomment for headless
+
+    class PatchedChrome(uc.Chrome):
+        def __del__(self):
+            pass  # suppress undetected_chromedriver cleanup bug
+
+    driver = PatchedChrome(options=options)
+    print("Browser launched")
+
+    driver.get(URL)
+    login(driver)  # ✅ du har allerede en login-metode
+
+    driver.get(URL)
+    print("Target URL requested")
+
+    # ⏳ Vent til skemaet er loaded
+    try:
+        WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "div.weekDiv"))
+        )
+    except Exception as e:
+        print("Timeout waiting for schedule:", e)
+        driver.quit()
+        return []
+
+    soup = BeautifulSoup(driver.page_source, "html.parser")
+    print("Soup ready")
+
+    # 📅 Find dagens dato i formatet YYYYMMDD
+    today = dt.date.today().strftime("%Y%m%d")
+
+    print("Looking for date:", today)
+
+    # Find den rigtige dag i skemaet
+    week_div = soup.find("div", {"class": "weekDiv", "data-dates": today})
+    if not week_div:
+        print(f"No schedule found for {today}")
+        driver.quit()
+        return []
+
+    # Hent alle booking-divs for dagen
+    data = []
+    for booking in week_div.find_all("div", class_="bookingDiv"):
+        title = booking.get("title")
+        if not title:
+            continue
+
+        # Eksempel parsing (tid, fag, lærer, lokale)
+        parts = title.split(", ")
+        time = parts[0].split(" ", 3)[0] + " " + parts[0].split(" ", 3)[1] + " " + parts[0].split(" ", 3)[2]
+        subject = parts[1] if len(parts) > 1 else ""
+        teacher = parts[2] if len(parts) > 2 else ""
+        room = parts[3].split(" Id ")[0] if len(parts) > 3 else ""
+
+        data.append({
+            "time": time,
+            "subject": subject,
+            "teacher": teacher,
+            "room": room
+        })
+
+    driver.quit()
+    print("Browser closed")
+    print(data)
     return data
 
 

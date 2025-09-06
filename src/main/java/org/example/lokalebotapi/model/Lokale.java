@@ -2,48 +2,58 @@ package org.example.lokalebotapi.model;
 
 public class Lokale {
 
-    String tid;
-    String fag;
-    String underviser;
-    String rum;
+    String time;
+    String subject;
+    String teacher;
+    String room;
 
 
-    public Lokale(String tid, String fag, String underviser, String rum) {
-        this.tid = tid;
-        this.fag = fag;
-        this.underviser = underviser;
-        this.rum = rum;
+    public Lokale(String time, String subject, String teacher, String room) {
+        this.time = time;
+        this.subject = subject;
+        this.teacher = teacher;
+        this.room = room;
     }
 
-    public String getTid() {
-        return tid;
+    public String getTime() {
+        return time;
     }
 
-    public void setTid(String tid) {
-        this.tid = tid;
+    public void setTime(String time) {
+        this.time = time;
     }
 
-    public String getFag() {
-        return fag;
+    public String getSubject() {
+        return subject;
     }
 
-    public void setFag(String fag) {
-        this.fag = fag;
+    public void setSubject(String subject) {
+        this.subject = subject;
     }
 
-    public String getUnderviser() {
-        return underviser;
+    public String getTeacher() {
+        return teacher;
     }
 
-    public void setUnderviser(String underviser) {
-        this.underviser = underviser;
+    public void setTeacher(String teacher) {
+        this.teacher = teacher;
     }
 
-    public String getRum() {
-        return rum;
+    public String getRoom() {
+        return room;
     }
 
-    public void setRum(String rum) {
-        this.rum = rum;
+    public void setRoom(String room) {
+        this.room = room;
+    }
+
+    @Override
+    public String toString() {
+        return "Lokale{" +
+                "time='" + time + '\'' +
+                ", subject='" + subject + '\'' +
+                ", teacher='" + teacher + '\'' +
+                ", room='" + room + '\'' +
+                '}';
     }
 }
