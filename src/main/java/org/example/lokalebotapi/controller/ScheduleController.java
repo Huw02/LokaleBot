@@ -13,7 +13,7 @@ public class ScheduleController {
         this.scheduleScraper = scheduleScraper;
     }
 
-    @GetMapping("/api/schedule")
+    @GetMapping("/schedule")
     public JsonNode getSchedule() {
         JsonNode schedule = scheduleScraper.getLatestSchedule();
         if (schedule == null) {

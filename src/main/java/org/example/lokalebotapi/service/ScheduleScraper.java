@@ -5,41 +5,67 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.util.stream.Collectors;
+import java.io.*;
+import java.util.Map;
 
 @Service
 public class ScheduleScraper {
 
     private final ObjectMapper objectMapper = new ObjectMapper();
 
-    // Variabel til at gemme seneste skema
     private JsonNode latestSchedule;
 
     public JsonNode getLatestSchedule() {
         return latestSchedule;
     }
 
-    // Kører hver dag kl. 06:55 (cron format: sekund minut time dag måned ugedag)
-    @Scheduled(cron = "0 55 6 * * MON-FRI")
+    @Scheduled(cron = "0 55 13 * * MON-FRI") // Juster tidspunkt her
     public void scrapeSchedule() {
         try {
-            ProcessBuilder pb = new ProcessBuilder("python3", "src/main/resources/scraper/schedule_scraper.py");
-            pb.redirectErrorStream(true);
+            // Absolut sti til Python
+            String pythonPath = "C:\\Users\\Hanni\\AppData\\Local\\Programs\\Python\\Python313\\python.exe";
+            String scriptPath = "C:\\Users\\Hanni\\IdeaProjects\\LokaleBotAPI\\src\\main\\resources\\scraper\\main.py";
+
+            ProcessBuilder pb = new ProcessBuilder(pythonPath, scriptPath);
+
+            // Tilføj environment variables hvis nødvendigt
+            Map<String, String> env = pb.environment();
+            env.put("SOME_ENV_VAR", "value"); // Eksempel
+
+            pb.redirectErrorStream(true); // Saml stdout og stderr
+
+            // Sæt working directory til script-mappen
+            pb.directory(new File("C:\\Users\\Hanni\\IdeaProjects\\LokaleBotAPI\\src\\main\\resources\\scraper"));
+
             Process process = pb.start();
 
-            String result = new BufferedReader(new InputStreamReader(process.getInputStream()))
-                    .lines().collect(Collectors.joining());
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            String line;
+            String jsonOutput = null;
+
+            while ((line = reader.readLine()) != null) {
+                System.out.println("[Python] " + line); // debug output
+
+                // Hvis linjen starter med [ eller { → antag JSON
+                if (line.startsWith("[") || line.startsWith("{")) {
+                    jsonOutput = line;
+                }
+            }
 
             int exitCode = process.waitFor();
+            System.out.println("Python exit code: " + exitCode);
+
             if (exitCode != 0) {
-                System.err.println("❌ Scraper fejlede");
+                System.err.println("❌ Python-script fejlede");
                 return;
             }
 
-            latestSchedule = objectMapper.readTree(result);
-            System.out.println("✅ Skema scraped kl. 06:55");
+            if (jsonOutput != null) {
+                latestSchedule = objectMapper.readTree(jsonOutput);
+                System.out.println("✅ Skema scraped korrekt");
+            } else {
+                System.err.println("❌ Ingen JSON output fra Python-scriptet");
+            }
 
         } catch (Exception e) {
             e.printStackTrace();
