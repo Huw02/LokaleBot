@@ -19,13 +19,13 @@ public class ScheduleScraper {
         return latestSchedule;
     }
 
-    @Scheduled(cron = "0 00 15 * * MON-FRI") // Juster tidspunkt her
+    @Scheduled(cron = "0 55 19 * * MON-FRI") // Juster tidspunkt her
     public void scrapeSchedule() {
         try {
             // Absolut sti til Python
             //String pythonPath = "C:\\Users\\Hanni\\AppData\\Local\\Programs\\Python\\Python313\\python.exe";
             String pythonPath = "python3";
-            String scriptPath = "C:\\Users\\Hanni\\IdeaProjects\\LokaleBotAPI\\src\\main\\resources\\scraper\\main.py";
+            String scriptPath = "src/main/resources/scraper/main.py";
 
             ProcessBuilder pb = new ProcessBuilder(pythonPath, scriptPath);
 
@@ -36,7 +36,7 @@ public class ScheduleScraper {
             pb.redirectErrorStream(true); // Saml stdout og stderr
 
             // Sæt working directory til script-mappen
-            pb.directory(new File("C:\\Users\\Hanni\\IdeaProjects\\LokaleBotAPI\\src\\main\\resources\\scraper"));
+            pb.directory(new File("src/main/resources/scraper"));
 
             Process process = pb.start();
 
