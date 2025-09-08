@@ -23,7 +23,8 @@ public class ScheduleScraper {
     public void scrapeSchedule() {
         try {
             // Absolut sti til Python
-            String pythonPath = "C:\\Users\\Hanni\\AppData\\Local\\Programs\\Python\\Python313\\python.exe";
+            //String pythonPath = "C:\\Users\\Hanni\\AppData\\Local\\Programs\\Python\\Python313\\python.exe";
+            String pythonPath = "python3";
             String scriptPath = "C:\\Users\\Hanni\\IdeaProjects\\LokaleBotAPI\\src\\main\\resources\\scraper\\main.py";
 
             ProcessBuilder pb = new ProcessBuilder(pythonPath, scriptPath);
