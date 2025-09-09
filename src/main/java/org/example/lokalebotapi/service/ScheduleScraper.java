@@ -19,7 +19,7 @@ public class ScheduleScraper {
         return latestSchedule;
     }
 
-    @Scheduled(cron = "0 00 18 * * MON-FRI") // Juster tidspunkt her
+    @Scheduled(cron = "0 20 18 * * MON-FRI") // Juster tidspunkt her
     public void scrapeSchedule() {
         try {
             // Absolut sti til Python
