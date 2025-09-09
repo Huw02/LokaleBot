@@ -7,7 +7,7 @@ sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding='utf-8')
 def send_to_backend(data):
     try:
         response = requests.post(
-            "http://localhost:8080/api/scraped",
+            "lokalebotapi.azurewebsites.net/api/scraped",
             json=data,
             headers={'Content-Type': 'application/json'}
         )
